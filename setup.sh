@@ -10,10 +10,16 @@ sudo raspi-config nonint do_i2c 0
 
 echo "Installing system dependencies for HEIC support..."
 sudo apt-get update
-sudo apt-get install -y libheif-dev libffi-dev libssl-dev python3-dev python3-pip
+sudo apt-get install -y libheif-dev libffi-dev libssl-dev python3-dev python3-pip python3-venv
 
-echo "Installing Python dependencies..."
-sudo pip3 install -r requirements.txt
+echo "Creating virtual environment..."
+VENV_DIR="$(pwd)/venv"
+if [ ! -d "$VENV_DIR" ]; then
+    python3 -m venv "$VENV_DIR"
+fi
+
+echo "Installing Python dependencies into venv..."
+"$VENV_DIR/bin/pip" install -r requirements.txt
 
 echo "Setting up python script epaper service..."
 SERVICE_NAME="epaper.service"
@@ -26,7 +32,7 @@ Description=ePaper Display Service
 After=network.target
 
 [Service]
-ExecStart=$(which python3) $(pwd)/frame_manager.py
+ExecStart=$(pwd)/venv/bin/python $(pwd)/frame_manager.py
 WorkingDirectory=$(pwd)
 Restart=always
 User=$CURRENT_USER
@@ -48,7 +54,7 @@ Description=eInk Frame Web Interface
 After=network.target
 
 [Service]
-ExecStart=$(which python3) $(pwd)/web_manager.py
+ExecStart=$(pwd)/venv/bin/python $(pwd)/web_manager.py
 WorkingDirectory=$(pwd)
 Restart=always
 User=root
