@@ -32,9 +32,9 @@ class ImageConverter:
     # Crops the image to the target dimensions and enhances color and contrast.
     # Saves the processed image to the output directory.
     def resize_image(self, img_path, file_name):
-        # Screen target size dims
-        target_width = 800
-        target_height = 480
+        # Screen target size dims (Portrait)
+        target_width = 480
+        target_height = 800
 
         with Image.open(img_path) as img:
             img = ImageOps.exif_transpose(img)

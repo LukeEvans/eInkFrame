@@ -21,7 +21,7 @@ class DisplayManager:
         self.last_display_time = time.time()
         self.last_selected_image = None
         self.image_folder = image_folder
-        self.rotation = 180 
+        self.rotation = 0
         self.refresh_time = refresh_time
         self.epd = epd7in3e.EPD()
         self.epd.init()
@@ -60,7 +60,7 @@ class DisplayManager:
             
         # Open and display the image
         with Image.open(os.path.join(self.image_folder, random_image)) as pic:
-            pic = pic.rotate(self.rotation, expand=True)
+            # Driver auto-handles rotation for 480x800 input
             self.epd.display(self.epd.getbuffer(pic))
             self.last_display_time = time.time()
 
@@ -83,6 +83,8 @@ class DisplayManager:
 
     def display_message(self, message_file):
         with Image.open(os.path.join(SCRIPT_DIR, f"messages/{message_file}")) as img_start:
-                img_start = img_start.rotate(self.rotation, expand=True)
+                # Assuming messages are pre-formatted or small enough, 
+                # but if they need rotation, we might need to handle them differently.
+                # For now, let's trust the driver handles it if dimensions match.
                 self.epd.display(self.epd.getbuffer(img_start))
 
