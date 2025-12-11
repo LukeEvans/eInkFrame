@@ -196,7 +196,8 @@ class EPD:
         if(imwidth == self.width and imheight == self.height):
             image_temp = image
         elif(imwidth == self.height and imheight == self.width):
-            image_temp = image.rotate(90, expand=True)
+            # image_temp = image.rotate(90, expand=True)
+            image_temp = image
         else:
             logger.warning("Invalid image dimensions: %d x %d, expected %d x %d" % 
                            (imwidth, imheight, self.width, self.height))
