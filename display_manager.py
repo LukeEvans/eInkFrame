@@ -21,7 +21,7 @@ class DisplayManager:
         self.last_display_time = time.time()
         self.last_selected_image = None
         self.image_folder = image_folder
-        self.rotation = 0
+        self.rotation = 180
         self.refresh_time = refresh_time
         self.epd = epd7in3e.EPD()
         self.epd.init()
@@ -60,7 +60,9 @@ class DisplayManager:
             
         # Open and display the image
         with Image.open(os.path.join(self.image_folder, random_image)) as pic:
-            # Driver auto-handles rotation for 480x800 input
+            # Driver auto-handles rotation for 480x800 input, but if it is upside down
+            # we need to rotate it 180 degrees first.
+            pic = pic.rotate(self.rotation, expand=False)
             self.epd.display(self.epd.getbuffer(pic))
             self.last_display_time = time.time()
 
@@ -76,7 +78,7 @@ class DisplayManager:
                 # Open and display the image
                 with Image.open(os.path.join(self.image_folder, random_image)) as pic:
                     print(f"Displaying new image: {random_image}")
-                    pic = pic.rotate(self.rotation, expand=True)
+                    pic = pic.rotate(self.rotation, expand=False)
                     self.epd.display(self.epd.getbuffer(pic))
                     self.last_display_time = time.time()
     
