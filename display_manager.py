@@ -60,7 +60,7 @@ class DisplayManager:
             
         # Open and display the image
         with Image.open(os.path.join(self.image_folder, random_image)) as pic:
-            pic = pic.rotate(self.rotation)
+            pic = pic.rotate(self.rotation, expand=True)
             self.epd.display(self.epd.getbuffer(pic))
             self.last_display_time = time.time()
 
@@ -76,13 +76,13 @@ class DisplayManager:
                 # Open and display the image
                 with Image.open(os.path.join(self.image_folder, random_image)) as pic:
                     print(f"Displaying new image: {random_image}")
-                    pic = pic.rotate(self.rotation)
+                    pic = pic.rotate(self.rotation, expand=True)
                     self.epd.display(self.epd.getbuffer(pic))
                     self.last_display_time = time.time()
     
 
     def display_message(self, message_file):
         with Image.open(os.path.join(SCRIPT_DIR, f"messages/{message_file}")) as img_start:
-                img_start = img_start.rotate(self.rotation)
+                img_start = img_start.rotate(self.rotation, expand=True)
                 self.epd.display(self.epd.getbuffer(img_start))
 
