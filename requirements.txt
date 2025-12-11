@@ -4,3 +4,4 @@ pillow-heif
 spidev
 RPi.GPIO
 gpiozero
+rpi-lgpio
