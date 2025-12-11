@@ -21,7 +21,7 @@ class DisplayManager:
         self.last_display_time = time.time()
         self.last_selected_image = None
         self.image_folder = image_folder
-        self.rotation = 0
+        self.rotation = 270
         self.refresh_time = refresh_time
         self.epd = epd7in3e.EPD()
         self.epd.init()
