@@ -21,7 +21,7 @@ class DisplayManager:
         self.last_display_time = time.time()
         self.last_selected_image = None
         self.image_folder = image_folder
-        self.rotation = 270
+        self.rotation = 90 # Trying 90 instead of 270 to see if it fixes the tiling issue
         self.refresh_time = refresh_time
         self.epd = epd7in3e.EPD()
         self.epd.init()
