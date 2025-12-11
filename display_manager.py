@@ -29,7 +29,9 @@ class DisplayManager:
 
     # Fetches the image files from the specified folder.
     def fetch_image_files(self):
-        return [f for f in os.listdir(self.image_folder)]
+        files = [f for f in os.listdir(self.image_folder) if not f.startswith('.')]
+        print(f"Found {len(files)} images in {self.image_folder}")
+        return files
 
 
     # Selects a random image from the list of images.
@@ -81,6 +83,8 @@ class DisplayManager:
                     pic = pic.rotate(self.rotation, expand=False)
                     self.epd.display(self.epd.getbuffer(pic))
                     self.last_display_time = time.time()
+            
+            time.sleep(1) # Sleep to reduce CPU usage
     
 
     def display_message(self, message_file):
