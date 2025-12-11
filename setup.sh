@@ -19,7 +19,7 @@ Description=ePaper Display Service
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/python3 $(pwd)/sd_monitor.py
+ExecStart=/usr/bin/python3 $(pwd)/frame_manager.py
 WorkingDirectory=$(pwd)
 Restart=always
 User=$CURRENT_USER

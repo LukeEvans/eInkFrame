@@ -6,15 +6,25 @@ import sys
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PIC_PATH = os.path.join(SCRIPT_DIR, 'pic')
-SD_MOUNT_BASE = "/media/pi"  # Adjust this path as needed
-
 
 if __name__ == "__main__":
 
-    # Collect arguments from the command line
-    sd_path = sys.argv[1]
-    refresh_time = int(sys.argv[2])
-    print(f"Frame manager received SD path: {sd_path}")
+    # Define source path and config path
+    sd_path = os.path.expanduser("~/images")
+    config_path = os.path.expanduser("~/config.txt")
+    
+    # Get refresh time from config or default
+    refresh_time = 600
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, 'r') as f:
+                content = f.read().strip()
+                if content.isdigit():
+                    refresh_time = int(content)
+        except Exception as e:
+            print(f"Error reading config: {e}")
+
+    print(f"Frame manager received Source path: {sd_path}")
     print(f"Frame manager received refresh time: {refresh_time} seconds")
     
     display_manager = DisplayManager(image_folder=PIC_PATH, refresh_time=refresh_time)
