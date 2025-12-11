@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>eInk Frame Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .image-card {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        .image-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+        .delete-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(220, 53, 69, 0.8);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .delete-btn:hover {
+            background: rgba(220, 53, 69, 1);
+            color: white;
+        }
+        .upload-area {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            background: #f8f9fa;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container py-4">
+        <h1 class="mb-4 text-center">eInk Frame Manager</h1>
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-info alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Settings Section -->
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0">Settings</h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('update_config') }}" method="post" class="row g-3 align-items-center">
+                    <div class="col-auto">
+                        <label for="refresh_time" class="col-form-label">Refresh Time (seconds):</label>
+                    </div>
+                    <div class="col-auto">
+                        <input type="number" id="refresh_time" name="refresh_time" class="form-control" value="{{ refresh_time }}" min="60">
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-primary">Save & Restart</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0">Upload Images</h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data">
+                    <div class="upload-area">
+                        <input type="file" name="files[]" multiple accept=".jpg,.jpeg,.png,.bmp,.gif,.heic,.heif" class="form-control mb-3">
+                        <p class="text-muted small">Supported: JPG, PNG, BMP, GIF, HEIC (iPhone)</p>
+                        <button type="submit" class="btn btn-success w-100">Upload</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Gallery Section -->
+        <h3 class="mb-3">Gallery ({{ images|length }})</h3>
+        <div class="row">
+            {% for image in images %}
+            <div class="col-6 col-md-4 col-lg-3">
+                <div class="image-card shadow-sm">
+                    <img src="{{ url_for('serve_image', filename=image) }}" alt="{{ image }}">
+                    <a href="{{ url_for('delete_file', filename=image) }}" class="delete-btn" onclick="return confirm('Are you sure you want to delete this image?');">
+                        &times;
+                    </a>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-12 text-center text-muted">
+                <p>No images found. Upload some!</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+

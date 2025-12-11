@@ -8,6 +8,13 @@ sudo sed -i 's/^dtparam=i2c_arm=.*/dtparam=i2c_arm=on/' /boot/config.txt
 sudo sed -i 's/^#dtparam=i2c_arm=.*/dtparam=i2c_arm=on/' /boot/config.txt
 sudo raspi-config nonint do_i2c 0
 
+echo "Installing system dependencies for HEIC support..."
+sudo apt-get update
+sudo apt-get install -y libheif-dev libffi-dev libssl-dev python3-dev python3-pip
+
+echo "Installing Python dependencies..."
+sudo pip3 install -r requirements.txt
+
 echo "Setting up python script epaper service..."
 SERVICE_NAME="epaper.service"
 SERVICE_PATH="/etc/systemd/system/${SERVICE_NAME}"
@@ -19,7 +26,7 @@ Description=ePaper Display Service
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/python3 $(pwd)/frame_manager.py
+ExecStart=$(which python3) $(pwd)/frame_manager.py
 WorkingDirectory=$(pwd)
 Restart=always
 User=$CURRENT_USER
@@ -28,11 +35,43 @@ User=$CURRENT_USER
 WantedBy=multi-user.target
 EOF
 
-echo "Enabling service..."
+echo "Setting up Web Interface service..."
+WEB_SERVICE_NAME="web_interface.service"
+WEB_SERVICE_PATH="/etc/systemd/system/${WEB_SERVICE_NAME}"
+
+# Note: Running as root to bind to port 80.
+# If security is a concern, consider running on port 5000 and proxying,
+# or using authbind/capabilities. For this local home project, root is simpler.
+sudo tee "$WEB_SERVICE_PATH" > /dev/null <<EOF
+[Unit]
+Description=eInk Frame Web Interface
+After=network.target
+
+[Service]
+ExecStart=$(which python3) $(pwd)/web_manager.py
+WorkingDirectory=$(pwd)
+Restart=always
+User=root
+Environment=SUDO_USER=$CURRENT_USER
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+echo "Enabling services..."
 sudo systemctl daemon-reload
 sudo systemctl enable "$SERVICE_NAME"
+sudo systemctl enable "$WEB_SERVICE_NAME"
 
-echo "Setup complete!"
+# Allow the web interface (running as root) to restart the epaper service
+# (Already root, so no sudoers change needed for the service itself, 
+# but good to ensure permissions are clean).
+
+echo "Starting services..."
+sudo systemctl start "$WEB_SERVICE_NAME"
+sudo systemctl start "$SERVICE_NAME"
+
+echo "Setup complete! Web Interface running on Port 80."
 read -p "Reboot requried. Reboot now? (y/n): " REBOOT_CHOICE
 if [[ "$REBOOT_CHOICE" == "y" || "$REBOOT_CHOICE" == "Y" ]]; then
     echo "Rebooting now..."
