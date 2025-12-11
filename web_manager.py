@@ -12,8 +12,15 @@ app = Flask(__name__)
 app.secret_key = 'supersecretkey'  # Change this for production security
 
 # Configuration
-IMAGE_FOLDER = os.path.expanduser('~/images')
-CONFIG_FILE = os.path.expanduser('~/config.txt')
+# Get user from environment variable if running as root via sudo/systemd
+sudo_user = os.environ.get('SUDO_USER')
+if sudo_user:
+    IMAGE_FOLDER = f'/home/{sudo_user}/images'
+    CONFIG_FILE = f'/home/{sudo_user}/config.txt'
+else:
+    # Fallback for development/local run
+    IMAGE_FOLDER = os.path.expanduser('~/images')
+    CONFIG_FILE = os.path.expanduser('~/config.txt')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'bmp', 'gif', 'heic', 'heif'}
 
 if not os.path.exists(IMAGE_FOLDER):
