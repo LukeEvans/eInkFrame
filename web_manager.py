@@ -97,47 +97,91 @@ def get_storage_info():
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
+    # Check if this is an AJAX request
+    is_ajax = request.headers.get('Content-Type') == 'application/json' or request.is_json
+
     # Check storage limits first
     if is_storage_full():
-        flash('Storage is full. Please delete some images before uploading new ones.')
+        message = 'Storage is full. Please delete some images before uploading new ones.'
+        if is_ajax:
+            return {'success': False, 'message': message}
+        flash(message)
         return redirect(url_for('index'))
 
     if is_storage_warning():
-        flash('Storage is almost full. Consider deleting some images to free up space.')
+        message = 'Storage is almost full. Consider deleting some images to free up space.'
+        if is_ajax:
+            # Still allow upload but warn
+            pass
+        else:
+            flash(message)
 
     if 'files[]' not in request.files:
-        flash('No file part')
+        message = 'No file part'
+        if is_ajax:
+            return {'success': False, 'message': message}
+        flash(message)
         return redirect(request.url)
 
     files = request.files.getlist('files[]')
-    
+    uploaded_files = []
+    failed_files = []
+
     for file in files:
         if file.filename == '':
             continue
-            
+
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             file_ext = filename.rsplit('.', 1)[1].lower()
-            
-            # Convert HEIC to JPG
-            if file_ext in ['heic', 'heif']:
-                try:
+
+            try:
+                # Convert HEIC to JPG
+                if file_ext in ['heic', 'heif']:
                     img = Image.open(file)
                     # Convert to RGB if necessary
                     if img.mode != 'RGB':
                         img = img.convert('RGB')
-                    
+
                     new_filename = filename.rsplit('.', 1)[0] + '.jpg'
                     save_path = os.path.join(IMAGE_FOLDER, new_filename)
                     img.save(save_path, "JPEG", quality=90)
-                except Exception as e:
-                    print(f"Error converting {filename}: {e}")
-                    flash(f'Error converting {filename}')
-                    continue
-            else:
-                # Save regular images directly
-                file.save(os.path.join(IMAGE_FOLDER, filename))
-                
+                    uploaded_files.append(new_filename)
+                else:
+                    # Save regular images directly
+                    file.save(os.path.join(IMAGE_FOLDER, filename))
+                    uploaded_files.append(filename)
+            except Exception as e:
+                print(f"Error processing {filename}: {e}")
+                failed_files.append(filename)
+        else:
+            failed_files.append(file.filename)
+
+    # Prepare response
+    if is_ajax:
+        response = {
+            'success': len(uploaded_files) > 0,
+            'uploaded': uploaded_files,
+            'failed': failed_files,
+            'storage_warning': is_storage_warning()
+        }
+        if uploaded_files:
+            response['message'] = f'Successfully uploaded {len(uploaded_files)} image(s)'
+            if failed_files:
+                response['message'] += f', {len(failed_files)} failed'
+        elif failed_files:
+            response['message'] = f'Failed to upload {len(failed_files)} image(s)'
+        else:
+            response['message'] = 'No valid files to upload'
+
+        return response
+
+    # Regular form submission - use flash messages
+    if uploaded_files:
+        flash(f'Successfully uploaded {len(uploaded_files)} image(s)')
+    if failed_files:
+        flash(f'Failed to upload {len(failed_files)} file(s): {", ".join(failed_files)}')
+
     return redirect(url_for('index'))
 
 @app.route('/delete/<filename>')

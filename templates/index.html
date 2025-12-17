@@ -208,6 +208,40 @@
             box-shadow: 0 4px 8px 0 rgba(59, 130, 246, 0.4);
         }
 
+        .upload-area.uploading {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        .upload-area.uploading .upload-icon {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .upload-area.uploading .upload-text {
+            color: #64748b;
+        }
+
+        .upload-btn.uploading {
+            pointer-events: none;
+            background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
+        }
+
+        .upload-btn.uploading .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+            margin-right: 0.5rem;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
         .gallery-section h2 {
             font-size: 1.75rem;
             font-weight: 500;
@@ -486,18 +520,16 @@
         <!-- Upload Section -->
         <section class="upload-section">
             <h2><i class="fas fa-cloud-upload-alt"></i> Add New Photos</h2>
-            <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data">
-                <div class="upload-area">
-                    <i class="fas fa-images upload-icon"></i>
-                    <div class="upload-text">Choose photos to add to your collection</div>
-                    <div class="upload-subtext">JPG, PNG, BMP, GIF, HEIC supported</div>
-                    <input type="file" name="files[]" multiple accept=".jpg,.jpeg,.png,.bmp,.gif,.heic,.heif" style="display: none;" id="file-input">
-                    <button type="submit" class="upload-btn">
-                        <i class="fas fa-plus me-2"></i>
-                        Upload Photos
-                    </button>
-                </div>
-            </form>
+            <div class="upload-area" id="upload-area">
+                <i class="fas fa-images upload-icon"></i>
+                <div class="upload-text">Choose photos to add to your collection</div>
+                <div class="upload-subtext">JPG, PNG, BMP, GIF, HEIC supported</div>
+                <input type="file" name="files[]" multiple accept=".jpg,.jpeg,.png,.bmp,.gif,.heic,.heif" style="display: none;" id="file-input">
+                <button type="button" class="upload-btn" id="upload-btn">
+                    <i class="fas fa-plus me-2"></i>
+                    Upload Photos
+                </button>
+            </div>
         </section>
 
         <!-- Gallery Section -->
@@ -589,8 +621,16 @@
         `;
         document.head.appendChild(style);
 
-        // Handle upload area click
-        document.querySelector('.upload-area').addEventListener('click', function() {
+        // Handle upload area click (excluding the button)
+        document.querySelector('.upload-area').addEventListener('click', function(e) {
+            // Don't trigger file input if clicking on the upload button
+            if (!e.target.closest('#upload-btn')) {
+                document.getElementById('file-input').click();
+            }
+        });
+
+        // Handle upload button click
+        document.getElementById('upload-btn').addEventListener('click', function() {
             document.getElementById('file-input').click();
         });
 
@@ -607,17 +647,116 @@
                             return;
                         }
 
-                        // Auto-submit form when files are selected and storage is OK
-                        this.closest('form').submit();
+                        // Start upload process
+                        uploadFiles(this.files);
                     })
                     .catch(error => {
                         console.error('Error checking storage:', error);
                         showToast('Unable to check storage status. Upload may fail.', 'warning');
                         // Allow upload anyway if we can't check storage
-                        this.closest('form').submit();
+                        uploadFiles(this.files);
                     });
             }
         });
+
+        // Function to upload files via AJAX
+        function uploadFiles(files) {
+            const uploadArea = document.getElementById('upload-area');
+            const uploadBtn = document.getElementById('upload-btn');
+            const fileInput = document.getElementById('file-input');
+
+            // Show loading state
+            uploadArea.classList.add('uploading');
+            uploadBtn.classList.add('uploading');
+            uploadBtn.innerHTML = '<span class="spinner"></span>Uploading...';
+
+            // Prepare form data
+            const formData = new FormData();
+            for (let file of files) {
+                formData.append('files[]', file);
+            }
+
+            // Upload files
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Reset loading state
+                uploadArea.classList.remove('uploading');
+                uploadBtn.classList.remove('uploading');
+                uploadBtn.innerHTML = '<i class="fas fa-plus me-2"></i>Upload Photos';
+                fileInput.value = ''; // Clear file input
+
+                // Show result toast
+                if (data.success) {
+                    showToast(data.message, 'success');
+
+                    // Update storage indicator
+                    updateStorageIndicator();
+
+                    // Refresh gallery if files were uploaded
+                    if (data.uploaded && data.uploaded.length > 0) {
+                        refreshGallery();
+                    }
+
+                    // Show storage warning if applicable
+                    if (data.storage_warning) {
+                        showToast('Storage is almost full. Consider deleting some images to free up space.', 'warning');
+                    }
+                } else {
+                    showToast(data.message, 'danger');
+                }
+
+                // Show specific file feedback if there were failures
+                if (data.failed && data.failed.length > 0) {
+                    setTimeout(() => {
+                        showToast(`Failed to upload: ${data.failed.join(', ')}`, 'warning');
+                    }, 1000);
+                }
+            })
+            .catch(error => {
+                console.error('Upload error:', error);
+
+                // Reset loading state
+                uploadArea.classList.remove('uploading');
+                uploadBtn.classList.remove('uploading');
+                uploadBtn.innerHTML = '<i class="fas fa-plus me-2"></i>Upload Photos';
+                fileInput.value = '';
+
+                showToast('Upload failed. Please try again.', 'danger');
+            });
+        }
+
+        // Function to refresh the gallery after upload
+        function refreshGallery() {
+            fetch(window.location.href)
+                .then(response => response.text())
+                .then(html => {
+                    // Extract the gallery section from the HTML
+                    const parser = new DOMParser();
+                    const newDoc = parser.parseFromString(html, 'text/html');
+                    const newGallery = newDoc.querySelector('.gallery-section');
+
+                    if (newGallery) {
+                        // Replace the current gallery with the updated one
+                        const currentGallery = document.querySelector('.gallery-section');
+                        currentGallery.innerHTML = newGallery.innerHTML;
+
+                        // Update the image count display
+                        const imageCount = newDoc.querySelector('.image-count');
+                        if (imageCount) {
+                            document.querySelector('.image-count').textContent = imageCount.textContent;
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error refreshing gallery:', error);
+                    // Fallback: reload the page
+                    window.location.reload();
+                });
+        }
 
         // Handle display button clicks
         document.addEventListener('click', function(e) {
