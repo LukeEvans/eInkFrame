@@ -15,9 +15,6 @@ if __name__ == "__main__":
 
     print(f"Frame manager received Source path: {sd_path}")
 
-    display_manager = DisplayManager(image_folder=PIC_PATH, request_file=request_path)
-    print("Display manager created")
-
     # Delete existing directory and create a new one
     # This is where the images will be stored
     if os.path.exists(PIC_PATH):
@@ -26,6 +23,9 @@ if __name__ == "__main__":
 
     image_converter = ImageConverter(source_dir=sd_path, output_dir=PIC_PATH)
     print("Image converter created")
+
+    display_manager = DisplayManager(image_folder=PIC_PATH, request_file=request_path, image_converter=image_converter)
+    print("Display manager created")
 
     # Process images from the SD card
     display_manager.display_message('start.jpg')

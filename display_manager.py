@@ -19,8 +19,9 @@ class DisplayManager:
     # Initializes the display using the epd7in3f library.
     # Sets the rotation for the display.
     # Initializes image history tracking.
-    def __init__(self, image_folder, request_file=None):
+    def __init__(self, image_folder, request_file=None, image_converter=None):
         self.image_folder = image_folder
+        self.image_converter = image_converter
         self.rotation = 180
         self.request_file = request_file
         self.history_file = os.path.join(image_folder, '.display_history.json')
@@ -66,6 +67,7 @@ class DisplayManager:
         if now >= refresh_time and self.last_daily_refresh < refresh_time:
             return True
         return False
+
 
     # Fetches the image files from the specified folder.
     def fetch_image_files(self):
@@ -150,6 +152,15 @@ class DisplayManager:
 
                     # Refresh images list in case it's new
                     images = self.fetch_image_files()
+
+                    # If requested image not in processed images, try to process it
+                    if requested_image not in images:
+                        print(f"Requested image {requested_image} not found in display folder, processing...")
+                        if self.image_converter and self.image_converter.process_single_image(requested_image):
+                            images = self.fetch_image_files()  # Refresh list after processing
+                        else:
+                            print(f"Failed to process image: {requested_image}")
+                            continue
 
                     if requested_image in images:
                         print(f"Displaying requested image: {requested_image}")

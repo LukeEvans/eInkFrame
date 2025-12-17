@@ -79,3 +79,21 @@ class ImageConverter:
             # Save the final image
             cropped_img.save(os.path.join(self.output_dir, file_name))
 
+    # Process a single image by filename from source to output directory
+    def process_single_image(self, filename):
+        """Process a single image file from source to output directory."""
+        img_path = os.path.join(self.source_dir, filename)
+        output_path = os.path.join(self.output_dir, filename)
+
+        # Check if output already exists
+        if os.path.exists(output_path):
+            return True
+
+        # Check if source exists
+        if not os.path.exists(img_path):
+            return False
+
+        print(f"Processing single image: {filename}")
+        self.resize_image(img_path, filename)
+        return True
+
