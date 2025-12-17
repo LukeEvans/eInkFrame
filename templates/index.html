@@ -3,146 +3,454 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>eInk Frame Manager</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Daily Frame</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .image-card {
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            color: #334155;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.025em;
+        }
+
+        .header p {
+            font-size: 1.125rem;
+            color: #64748b;
+            font-weight: 400;
+        }
+
+        .upload-section {
+            background: white;
+            border-radius: 16px;
+            padding: 2.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            margin-bottom: 3rem;
+            border: 1px solid #e2e8f0;
+        }
+
+        .upload-section h2 {
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: #1e293b;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .upload-area {
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: 3rem 2rem;
+            text-align: center;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            transition: all 0.3s ease;
+            cursor: pointer;
             position: relative;
-            margin-bottom: 20px;
+            overflow: hidden;
         }
-        .image-card img {
-            width: 100%;
-            height: 200px;
-            object-fit: cover;
-            border-radius: 8px;
+
+        .upload-area:hover {
+            border-color: #94a3b8;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
         }
-        .delete-btn {
+
+        .upload-area::before {
+            content: '';
             position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(220, 53, 69, 0.8);
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(148, 163, 184, 0.05) 0%, rgba(203, 213, 225, 0.05) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .upload-area:hover::before {
+            opacity: 1;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: #94a3b8;
+            margin-bottom: 1rem;
+            transition: color 0.3s ease;
+        }
+
+        .upload-area:hover .upload-icon {
+            color: #64748b;
+        }
+
+        .upload-text {
+            font-size: 1.125rem;
+            color: #64748b;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .upload-subtext {
+            font-size: 0.875rem;
+            color: #94a3b8;
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
             color: white;
             border: none;
-            border-radius: 50%;
-            width: 32px;
-            height: 32px;
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 1.5rem;
+            box-shadow: 0 1px 3px 0 rgba(59, 130, 246, 0.3);
+        }
+
+        .upload-btn:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px 0 rgba(59, 130, 246, 0.4);
+        }
+
+        .gallery-section h2 {
+            font-size: 1.75rem;
+            font-weight: 500;
+            color: #1e293b;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .image-count {
+            background: #e2e8f0;
+            color: #475569;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .image-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+            position: relative;
+            border: 1px solid #e2e8f0;
+        }
+
+        .image-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        .image-card img {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .image-card:hover img {
+            transform: scale(1.02);
+        }
+
+        .image-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
             display: flex;
             align-items: center;
             justify-content: center;
+            gap: 1rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            border-radius: 12px;
+        }
+
+        .image-card:hover .image-overlay {
+            opacity: 1;
+        }
+
+        .action-btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
             cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
             text-decoration: none;
+            min-width: 100px;
+            justify-content: center;
         }
-        .delete-btn:hover {
-            background: rgba(220, 53, 69, 1);
-            color: white;
-        }
-        .upload-area {
-            border: 2px dashed #ccc;
-            padding: 20px;
-            text-align: center;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            background: #f8f9fa;
-        }
-        .image-card:hover .hover-show {
-            opacity: 1 !important;
-        }
+
         .display-btn {
-            position: relative;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            box-shadow: 0 1px 3px 0 rgba(16, 185, 129, 0.3);
         }
+
+        .display-btn:hover {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px 0 rgba(16, 185, 129, 0.4);
+        }
+
         .display-btn.loading {
             pointer-events: none;
+            opacity: 0.7;
         }
+
         .display-btn.loading .spinner {
             display: inline-block;
-            width: 16px;
-            height: 16px;
+            width: 14px;
+            height: 14px;
             border: 2px solid #ffffff;
             border-radius: 50%;
             border-top-color: transparent;
             animation: spin 1s linear infinite;
-            margin-right: 8px;
         }
+
+        .delete-btn {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            box-shadow: 0 1px 3px 0 rgba(239, 68, 68, 0.3);
+        }
+
+        .delete-btn:hover {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px 0 rgba(239, 68, 68, 0.4);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #94a3b8;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1.5rem;
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            font-size: 1.25rem;
+            font-weight: 500;
+            color: #64748b;
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state p {
+            font-size: 1rem;
+            color: #94a3b8;
+        }
+
+        .alert {
+            border-radius: 8px;
+            border: none;
+            padding: 1rem 1.5rem;
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            color: #1e40af;
+            box-shadow: 0 1px 3px 0 rgba(59, 130, 246, 0.1);
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            z-index: 1000;
+        }
+
+        .toast {
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border: none;
+            margin-bottom: 0.5rem;
+        }
+
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-        .toast-container {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1050;
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .image-grid {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: 1rem;
+            }
+
+            .upload-section {
+                padding: 2rem 1.5rem;
+            }
+
+            .upload-area {
+                padding: 2rem 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .image-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .action-btn {
+                padding: 0.625rem 1.25rem;
+                font-size: 0.8125rem;
+            }
         }
     </style>
 </head>
-<body class="bg-light">
-    <div class="container py-4">
-        <h1 class="mb-4 text-center">eInk Frame Manager</h1>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Daily Frame</h1>
+            <p>Manage your cherished memories, one beautiful day at a time</p>
+        </header>
 
         {% with messages = get_flashed_messages() %}
             {% if messages %}
                 {% for message in messages %}
-                    <div class="alert alert-info alert-dismissible fade show" role="alert">
+                    <div class="alert" role="alert">
+                        <i class="fas fa-info-circle me-2"></i>
                         {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 {% endfor %}
             {% endif %}
         {% endwith %}
 
         <!-- Upload Section -->
-        <div class="card mb-4 shadow-sm">
-            <div class="card-header">
-                <h5 class="mb-0">Upload Images</h5>
-            </div>
-            <div class="card-body">
-                <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data">
-                    <div class="upload-area">
-                        <input type="file" name="files[]" multiple accept=".jpg,.jpeg,.png,.bmp,.gif,.heic,.heif" class="form-control mb-3">
-                        <p class="text-muted small">Supported: JPG, PNG, BMP, GIF, HEIC (iPhone)</p>
-                        <button type="submit" class="btn btn-success w-100">Upload</button>
-                    </div>
-                </form>
-            </div>
-        </div>
+        <section class="upload-section">
+            <h2><i class="fas fa-cloud-upload-alt"></i> Add New Photos</h2>
+            <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data">
+                <div class="upload-area">
+                    <i class="fas fa-images upload-icon"></i>
+                    <div class="upload-text">Choose photos to add to your collection</div>
+                    <div class="upload-subtext">JPG, PNG, BMP, GIF, HEIC supported</div>
+                    <input type="file" name="files[]" multiple accept=".jpg,.jpeg,.png,.bmp,.gif,.heic,.heif" style="display: none;" id="file-input">
+                    <button type="submit" class="upload-btn">
+                        <i class="fas fa-plus me-2"></i>
+                        Upload Photos
+                    </button>
+                </div>
+            </form>
+        </section>
 
         <!-- Gallery Section -->
-        <h3 class="mb-3">Gallery ({{ images|length }})</h3>
-        <div class="row">
-            {% for image in images %}
-            <div class="col-6 col-md-4 col-lg-3">
-                <div class="image-card shadow-sm">
+        <section class="gallery-section">
+            <h2>
+                <i class="fas fa-photo-video"></i>
+                Your Photo Collection
+                <span class="image-count">{{ images|length }} photos</span>
+            </h2>
+
+            {% if images %}
+            <div class="image-grid">
+                {% for image in images %}
+                <div class="image-card">
                     <img src="{{ url_for('serve_image', filename=image) }}" alt="{{ image }}">
-                    <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center opacity-0 hover-show" style="background: rgba(0,0,0,0.5); transition: opacity 0.2s;">
-                         <button class="btn btn-primary btn-sm me-2 display-btn" data-filename="{{ image }}">Display</button>
+                    <div class="image-overlay">
+                        <button class="action-btn display-btn" data-filename="{{ image }}">
+                            <i class="fas fa-tv"></i>
+                            Display
+                        </button>
+                        <a href="{{ url_for('delete_file', filename=image) }}" class="action-btn delete-btn" onclick="return confirm('Remove this photo from your collection?');">
+                            <i class="fas fa-trash"></i>
+                            Delete
+                        </a>
                     </div>
-                    <a href="{{ url_for('delete_file', filename=image) }}" class="delete-btn" onclick="return confirm('Are you sure you want to delete this image?');">
-                        &times;
-                    </a>
                 </div>
+                {% endfor %}
             </div>
             {% else %}
-            <div class="col-12 text-center text-muted">
-                <p>No images found. Upload some!</p>
+            <div class="empty-state">
+                <i class="fas fa-images"></i>
+                <h3>No photos yet</h3>
+                <p>Upload some beautiful photos to get started with your daily frame</p>
             </div>
-            {% endfor %}
-        </div>
+            {% endif %}
+        </section>
 
         <!-- Toast Container -->
         <div class="toast-container"></div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Function to show toast notifications
         function showToast(message, type = 'success') {
             const toastContainer = document.querySelector('.toast-container');
             const toastId = 'toast-' + Date.now();
 
+            const typeStyles = {
+                success: { bg: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', icon: 'fas fa-check-circle' },
+                danger: { bg: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', icon: 'fas fa-exclamation-circle' },
+                warning: { bg: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', icon: 'fas fa-exclamation-triangle' }
+            };
+
+            const style = typeStyles[type] || typeStyles.success;
+
             const toastHtml = `
-                <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
-                    <div class="d-flex">
-                        <div class="toast-body">${message}</div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                <div id="${toastId}" class="toast" style="background: ${style.bg}; color: white;" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex align-items-center">
+                        <i class="${style.icon} me-2"></i>
+                        <div class="toast-body flex-grow-1">${message}</div>
+                        <button type="button" class="btn-close btn-close-white ms-2" onclick="this.parentElement.parentElement.remove()" aria-label="Close"></button>
                     </div>
                 </div>
             `;
@@ -150,27 +458,58 @@
             toastContainer.insertAdjacentHTML('beforeend', toastHtml);
 
             const toastElement = document.getElementById(toastId);
-            const toast = new bootstrap.Toast(toastElement);
-            toast.show();
+            toastElement.style.animation = 'slideIn 0.3s ease-out';
 
-            // Remove toast from DOM after it's hidden
-            toastElement.addEventListener('hidden.bs.toast', function() {
-                toastElement.remove();
-            });
+            // Auto-hide after 4 seconds
+            setTimeout(() => {
+                toastElement.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => toastElement.remove(), 300);
+            }, 4000);
         }
+
+        // Add CSS animations for toasts
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Handle upload area click
+        document.querySelector('.upload-area').addEventListener('click', function() {
+            document.getElementById('file-input').click();
+        });
+
+        // Handle file input change
+        document.getElementById('file-input').addEventListener('change', function() {
+            if (this.files.length > 0) {
+                // Auto-submit form when files are selected
+                this.closest('form').submit();
+            }
+        });
 
         // Handle display button clicks
         document.addEventListener('click', function(e) {
-            if (e.target.classList.contains('display-btn')) {
+            if (e.target.closest('.display-btn')) {
                 e.preventDefault();
 
-                const button = e.target;
+                const button = e.target.closest('.display-btn');
                 const filename = button.getAttribute('data-filename');
-                const originalText = button.innerHTML;
+                const icon = button.querySelector('i');
+                const textSpan = button.querySelector('span') || document.createElement('span');
+
+                // Store original content
+                const originalHTML = button.innerHTML;
 
                 // Show loading state
                 button.classList.add('loading');
-                button.innerHTML = '<span class="spinner"></span>Displaying...';
+                button.innerHTML = '<span class="spinner"></span><span>Sending...</span>';
 
                 // Send AJAX request
                 fetch(`/display/${filename}`, {
@@ -182,19 +521,19 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success !== false) {
-                        showToast(`Display request sent for ${filename}`, 'success');
+                        showToast(`Photo sent to your frame!`, 'success');
                     } else {
                         showToast(data.message, 'danger');
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    showToast('Failed to send display request', 'danger');
+                    showToast('Unable to send photo to frame', 'danger');
                 })
                 .finally(() => {
                     // Reset button state
                     button.classList.remove('loading');
-                    button.innerHTML = originalText;
+                    button.innerHTML = originalHTML;
                 });
             }
         });
