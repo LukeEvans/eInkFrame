@@ -2,6 +2,8 @@ import os
 import sys
 import time
 import random
+import json
+from datetime import datetime, timedelta
 from PIL import Image
 from lib.waveshare_epd import epd7in3e
 
@@ -15,18 +17,55 @@ class DisplayManager:
     """
 
     # Initializes the display using the epd7in3f library.
-    # Sets the rotation and refresh time for the display.
-    # Initializes the last display time and selected image to None.
-    def __init__(self, image_folder, refresh_time, request_file=None):
-        self.last_display_time = time.time()
-        self.last_selected_image = None
+    # Sets the rotation for the display.
+    # Initializes image history tracking.
+    def __init__(self, image_folder, request_file=None):
         self.image_folder = image_folder
         self.rotation = 180
-        self.refresh_time = refresh_time
         self.request_file = request_file
+        self.history_file = os.path.join(image_folder, '.display_history.json')
+        self.image_history = self.load_history()
+        self.last_daily_refresh = self.get_last_daily_refresh_time()
         self.epd = epd7in3e.EPD()
         self.epd.init()
         self.stop_display = False
+
+    def load_history(self):
+        """Load image display history from file."""
+        if os.path.exists(self.history_file):
+            try:
+                with open(self.history_file, 'r') as f:
+                    return json.load(f)
+            except:
+                return {}
+        return {}
+
+    def save_history(self):
+        """Save image display history to file."""
+        try:
+            with open(self.history_file, 'w') as f:
+                json.dump(self.image_history, f, indent=2)
+        except Exception as e:
+            print(f"Error saving history: {e}")
+
+    def get_last_daily_refresh_time(self):
+        """Get the last time we did a daily refresh."""
+        # Check if we have any history, if so use the most recent display time
+        if self.image_history:
+            latest_time = max(self.image_history.values())
+            return datetime.fromtimestamp(latest_time)
+        return datetime.now() - timedelta(days=1)  # Default to yesterday if no history
+
+    def should_refresh_daily(self):
+        """Check if it's time for daily refresh (2 AM)."""
+        now = datetime.now()
+        # Refresh at 2 AM
+        refresh_time = now.replace(hour=2, minute=0, second=0, microsecond=0)
+
+        # If it's past 2 AM today and we haven't refreshed today
+        if now >= refresh_time and self.last_daily_refresh < refresh_time:
+            return True
+        return False
 
     # Fetches the image files from the specified folder.
     def fetch_image_files(self):
@@ -35,16 +74,46 @@ class DisplayManager:
         return files
 
 
-    # Selects a random image from the list of images.
+    # Selects an image preferring ones not shown recently.
     def select_random_image(self, images):
         # If one image or less
         if len(images) <= 1:
             return images[0]
-        
-        # Select a random image unless it was previously selected
-        random_image = random.choice([img for img in images if img != self.last_selected_image])
-        
-        return random_image
+
+        current_time = time.time()
+
+        # Calculate weights based on how long ago each image was shown
+        # Images never shown get highest weight, recently shown get lower weight
+        weights = []
+        for img in images:
+            last_shown = self.image_history.get(img, 0)
+            if last_shown == 0:
+                # Never shown - highest priority
+                weight = 100
+            else:
+                # Weight decreases with how recently it was shown
+                days_since_shown = (current_time - last_shown) / (24 * 3600)
+                # Weight from 1 (shown today) to 50 (shown long ago)
+                weight = min(50, max(1, days_since_shown * 2))
+            weights.append(weight)
+
+        # Use weighted random selection
+        total_weight = sum(weights)
+        if total_weight == 0:
+            return random.choice(images)
+
+        pick = random.uniform(0, total_weight)
+        current_weight = 0
+        for i, img in enumerate(images):
+            current_weight += weights[i]
+            if pick <= current_weight:
+                # Update history when we select an image
+                self.image_history[img] = current_time
+                self.save_history()
+                return img
+
+        # Fallback
+        return random.choice(images)
 
 
     # Continuously loop to display a random image from the specified folder at the specified refresh time.
@@ -59,15 +128,13 @@ class DisplayManager:
             return
 
         random_image = self.select_random_image(images)
-        self.last_selected_image = random_image
-            
+
         # Open and display the image
         with Image.open(os.path.join(self.image_folder, random_image)) as pic:
             # Driver auto-handles rotation for 480x800 input, but if it is upside down
             # we need to rotate it 180 degrees first.
             pic = pic.rotate(self.rotation, expand=False)
             self.epd.display(self.epd.getbuffer(pic))
-            self.last_display_time = time.time()
 
         while not self.stop_display:
             # Check for display request
@@ -75,42 +142,43 @@ class DisplayManager:
                 try:
                     with open(self.request_file, 'r') as f:
                         requested_image = f.read().strip()
-                    
+
                     try:
                         os.remove(self.request_file)
                     except OSError:
                         pass
-                    
+
                     # Refresh images list in case it's new
                     images = self.fetch_image_files()
-                    
+
                     if requested_image in images:
                         print(f"Displaying requested image: {requested_image}")
-                        self.last_selected_image = requested_image
-                        
+                        # Update history for requested image
+                        self.image_history[requested_image] = time.time()
+                        self.save_history()
+
                         with Image.open(os.path.join(self.image_folder, requested_image)) as pic:
                             pic = pic.rotate(self.rotation, expand=False)
                             self.epd.display(self.epd.getbuffer(pic))
-                            self.last_display_time = time.time()
                 except Exception as e:
                     print(f"Error processing display request: {e}")
 
-            current_time = time.time()
-            elapsed_time = current_time - self.last_display_time
-            
-            if elapsed_time >= self.refresh_time:
+            # Check if it's time for daily refresh (2 AM)
+            if self.should_refresh_daily():
                 images = self.fetch_image_files()
-                random_image = self.select_random_image(images)
-                self.last_selected_image = random_image
+                if images:
+                    random_image = self.select_random_image(images)
 
-                # Open and display the image
-                with Image.open(os.path.join(self.image_folder, random_image)) as pic:
-                    print(f"Displaying new image: {random_image}")
-                    pic = pic.rotate(self.rotation, expand=False)
-                    self.epd.display(self.epd.getbuffer(pic))
-                    self.last_display_time = time.time()
-            
-            time.sleep(1) # Sleep to reduce CPU usage
+                    # Open and display the image
+                    with Image.open(os.path.join(self.image_folder, random_image)) as pic:
+                        print(f"Daily refresh: Displaying new image: {random_image}")
+                        pic = pic.rotate(self.rotation, expand=False)
+                        self.epd.display(self.epd.getbuffer(pic))
+
+                    # Update last daily refresh time
+                    self.last_daily_refresh = datetime.now()
+
+            time.sleep(60) # Sleep for 1 minute to reduce CPU usage
     
 
     def display_message(self, message_file):

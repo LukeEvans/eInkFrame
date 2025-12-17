@@ -16,16 +16,14 @@ app.secret_key = 'supersecretkey'  # Change this for production security
 sudo_user = os.environ.get('SUDO_USER')
 if sudo_user:
     IMAGE_FOLDER = f'/home/{sudo_user}/images'
-    CONFIG_FILE = f'/home/{sudo_user}/config.txt'
+    DISPLAY_REQUEST_FILE = f'/home/{sudo_user}/display_request.txt'
 else:
     # Fallback for development/local run
     IMAGE_FOLDER = os.path.expanduser('~/images')
-    CONFIG_FILE = os.path.expanduser('~/config.txt')
     DISPLAY_REQUEST_FILE = os.path.expanduser('~/display_request.txt')
 
 if sudo_user:
     IMAGE_FOLDER = f'/home/{sudo_user}/images'
-    CONFIG_FILE = f'/home/{sudo_user}/config.txt'
     DISPLAY_REQUEST_FILE = f'/home/{sudo_user}/display_request.txt'
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'bmp', 'gif', 'heic', 'heif'}
@@ -49,19 +47,8 @@ def restart_service():
 @app.route('/')
 def index():
     images = [f for f in os.listdir(IMAGE_FOLDER) if allowed_file(f) and not f.startswith('.')]
-    
-    # Read current refresh time
-    refresh_time = 600
-    if os.path.exists(CONFIG_FILE):
-        try:
-            with open(CONFIG_FILE, 'r') as f:
-                content = f.read().strip()
-                if content.isdigit():
-                    refresh_time = int(content)
-        except:
-            pass
-            
-    return render_template('index.html', images=images, refresh_time=refresh_time)
+
+    return render_template('index.html', images=images)
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -114,42 +101,30 @@ def delete_file(filename):
         
     return redirect(url_for('index'))
 
-@app.route('/config', methods=['POST'])
-def update_config():
-    refresh_time = request.form.get('refresh_time')
-    
-    if refresh_time and refresh_time.isdigit():
-        try:
-            with open(CONFIG_FILE, 'w') as f:
-                f.write(refresh_time)
-            
-            # Restart service to apply changes
-            if restart_service():
-                flash(f'Settings saved and service restarted (Interval: {refresh_time}s)')
-            else:
-                flash('Settings saved but failed to restart service')
-                
-        except Exception as e:
-            flash(f'Error saving config: {e}')
-    else:
-        flash('Invalid refresh time')
-        
-    return redirect(url_for('index'))
 
-@app.route('/display/<filename>')
+@app.route('/display/<filename>', methods=['GET', 'POST'])
 def display_image(filename):
+    success = True
     try:
         # Check if file exists in source directory
         file_path = os.path.join(IMAGE_FOLDER, filename)
         if os.path.exists(file_path):
             with open(DISPLAY_REQUEST_FILE, 'w') as f:
                 f.write(filename)
-            flash(f'Request to display {filename} sent.')
+            message = f'Request to display {filename} sent.'
         else:
-            flash('File not found.')
+            message = 'File not found.'
+            success = False
     except Exception as e:
-        flash(f'Error requesting display: {e}')
-        
+        message = f'Error requesting display: {e}'
+        success = False
+
+    # Check if this is an AJAX request
+    if request.headers.get('Content-Type') == 'application/json' or request.is_json:
+        return {'success': success, 'message': message}
+
+    # Regular request - use flash and redirect
+    flash(message)
     return redirect(url_for('index'))
 
 @app.route('/images/<filename>')
