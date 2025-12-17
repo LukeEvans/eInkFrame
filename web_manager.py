@@ -1,6 +1,7 @@
 import os
 import subprocess
-from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory
+import shutil
+from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, jsonify
 from PIL import Image
 from pillow_heif import register_heif_opener
 from werkzeug.utils import secure_filename
@@ -28,12 +29,47 @@ if sudo_user:
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'bmp', 'gif', 'heic', 'heif'}
 
+# Storage limits (in GB)
+STORAGE_WARNING_THRESHOLD = 0.8  # 80% usage warning
+STORAGE_LIMIT = 0.95  # 95% usage limit - prevent uploads
+
 if not os.path.exists(IMAGE_FOLDER):
     os.makedirs(IMAGE_FOLDER)
 
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def get_disk_usage():
+    """Get disk usage statistics for the images folder."""
+    stat = shutil.disk_usage(IMAGE_FOLDER)
+    total_bytes = stat.total
+    used_bytes = stat.used
+    free_bytes = stat.free
+
+    # Convert to GB for easier reading
+    total_gb = total_bytes / (1024**3)
+    used_gb = used_bytes / (1024**3)
+    free_gb = free_bytes / (1024**3)
+
+    usage_percent = (used_bytes / total_bytes) * 100 if total_bytes > 0 else 0
+
+    return {
+        'total_gb': round(total_gb, 2),
+        'used_gb': round(used_gb, 2),
+        'free_gb': round(free_gb, 2),
+        'usage_percent': round(usage_percent, 1)
+    }
+
+def is_storage_full():
+    """Check if storage usage exceeds the limit."""
+    usage = get_disk_usage()
+    return usage['usage_percent'] >= (STORAGE_LIMIT * 100)
+
+def is_storage_warning():
+    """Check if storage usage is approaching the limit."""
+    usage = get_disk_usage()
+    return usage['usage_percent'] >= (STORAGE_WARNING_THRESHOLD * 100)
 
 def restart_service():
     """Restart the e-ink display service to apply changes."""
@@ -47,15 +83,32 @@ def restart_service():
 @app.route('/')
 def index():
     images = [f for f in os.listdir(IMAGE_FOLDER) if allowed_file(f) and not f.startswith('.')]
+    storage_info = get_disk_usage()
 
-    return render_template('index.html', images=images)
+    return render_template('index.html', images=images, storage=storage_info)
+
+@app.route('/api/storage')
+def get_storage_info():
+    """API endpoint to get current storage information."""
+    storage_info = get_disk_usage()
+    storage_info['is_full'] = is_storage_full()
+    storage_info['is_warning'] = is_storage_warning()
+    return jsonify(storage_info)
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
+    # Check storage limits first
+    if is_storage_full():
+        flash('Storage is full. Please delete some images before uploading new ones.')
+        return redirect(url_for('index'))
+
+    if is_storage_warning():
+        flash('Storage is almost full. Consider deleting some images to free up space.')
+
     if 'files[]' not in request.files:
         flash('No file part')
         return redirect(request.url)
-    
+
     files = request.files.getlist('files[]')
     
     for file in files:

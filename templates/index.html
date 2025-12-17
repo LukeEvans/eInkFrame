@@ -46,6 +46,71 @@
             font-weight: 400;
         }
 
+        .storage-indicator {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            border: 1px solid #e2e8f0;
+        }
+
+        .storage-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .storage-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .storage-usage {
+            font-size: 0.875rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .storage-bar-container {
+            position: relative;
+            height: 12px;
+            background: #e2e8f0;
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+
+        .storage-bar {
+            height: 100%;
+            border-radius: 6px;
+            transition: width 0.3s ease;
+        }
+
+        .storage-bar-low {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        .storage-bar-warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+
+        .storage-bar-full {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+
+        .storage-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
         .upload-section {
             background: white;
             border-radius: 16px;
@@ -362,6 +427,36 @@
         <header class="header">
             <h1>Daily Frame</h1>
             <p>Memories, one day at a time.</p>
+
+            <!-- Storage Indicator -->
+            <div class="storage-indicator">
+                <div class="storage-header">
+                    <div class="storage-title">
+                        <i class="fas fa-hdd"></i>
+                        Storage Usage
+                    </div>
+                    <div class="storage-usage" id="storage-usage">
+                        {{ storage.used_gb }}GB / {{ storage.total_gb }}GB ({{ storage.usage_percent }}%)
+                    </div>
+                </div>
+                <div class="storage-bar-container">
+                    <div class="storage-bar {{ 'storage-bar-full' if storage.usage_percent >= 95 else 'storage-bar-warning' if storage.usage_percent >= 80 else 'storage-bar-low' }}"
+                         id="storage-bar"
+                         style="width: {{ storage.usage_percent }}%"></div>
+                </div>
+                <div class="storage-details">
+                    <span id="storage-free">{{ storage.free_gb }}GB free</span>
+                    <span id="storage-status">
+                        {% if storage.usage_percent >= 95 %}
+                            Storage Full
+                        {% elif storage.usage_percent >= 80 %}
+                            Low Space
+                        {% else %}
+                            Good
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
         </header>
 
         {% with messages = get_flashed_messages() %}
@@ -374,6 +469,19 @@
                 {% endfor %}
             {% endif %}
         {% endwith %}
+
+        <!-- Storage Warning -->
+        {% if storage.usage_percent >= 95 %}
+            <div class="alert" style="background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); color: #991b1b; border: none;" role="alert">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Storage Full:</strong> Your storage is at {{ storage.usage_percent }}% capacity. Please delete some images before uploading new ones.
+            </div>
+        {% elif storage.usage_percent >= 80 %}
+            <div class="alert" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color: #92400e; border: none;" role="alert">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                <strong>Low Storage:</strong> Your storage is at {{ storage.usage_percent }}% capacity. Consider deleting some images to free up space.
+            </div>
+        {% endif %}
 
         <!-- Upload Section -->
         <section class="upload-section">
@@ -489,8 +597,25 @@
         // Handle file input change
         document.getElementById('file-input').addEventListener('change', function() {
             if (this.files.length > 0) {
-                // Auto-submit form when files are selected
-                this.closest('form').submit();
+                // Check storage status before allowing upload
+                fetch('/api/storage')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.is_full) {
+                            showToast('Storage is full. Please delete some images before uploading new ones.', 'danger');
+                            this.value = ''; // Clear the file input
+                            return;
+                        }
+
+                        // Auto-submit form when files are selected and storage is OK
+                        this.closest('form').submit();
+                    })
+                    .catch(error => {
+                        console.error('Error checking storage:', error);
+                        showToast('Unable to check storage status. Upload may fail.', 'warning');
+                        // Allow upload anyway if we can't check storage
+                        this.closest('form').submit();
+                    });
             }
         });
 
@@ -537,6 +662,70 @@
                 });
             }
         });
+
+        // Function to update storage indicator
+        function updateStorageIndicator() {
+            fetch('/api/storage')
+                .then(response => response.json())
+                .then(data => {
+                    // Update usage text
+                    document.getElementById('storage-usage').textContent =
+                        `${data.used_gb}GB / ${data.total_gb}GB (${data.usage_percent}%)`;
+
+                    // Update free space
+                    document.getElementById('storage-free').textContent =
+                        `${data.free_gb}GB free`;
+
+                    // Update storage bar width and color
+                    const storageBar = document.getElementById('storage-bar');
+                    storageBar.style.width = `${data.usage_percent}%`;
+
+                    // Update bar color based on usage
+                    storageBar.className = 'storage-bar';
+                    if (data.usage_percent >= 95) {
+                        storageBar.classList.add('storage-bar-full');
+                    } else if (data.usage_percent >= 80) {
+                        storageBar.classList.add('storage-bar-warning');
+                    } else {
+                        storageBar.classList.add('storage-bar-low');
+                    }
+
+                    // Update status text
+                    const statusElement = document.getElementById('storage-status');
+                    if (data.usage_percent >= 95) {
+                        statusElement.textContent = 'Storage Full';
+                    } else if (data.usage_percent >= 80) {
+                        statusElement.textContent = 'Low Space';
+                    } else {
+                        statusElement.textContent = 'Good';
+                    }
+
+                    // Disable upload area if storage is full
+                    const uploadArea = document.querySelector('.upload-area');
+                    const uploadBtn = document.querySelector('.upload-btn');
+
+                    if (data.is_full) {
+                        uploadArea.style.opacity = '0.5';
+                        uploadArea.style.pointerEvents = 'none';
+                        uploadBtn.disabled = true;
+                        uploadBtn.textContent = 'Storage Full';
+                        uploadBtn.style.background = 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)';
+                    } else {
+                        uploadArea.style.opacity = '1';
+                        uploadArea.style.pointerEvents = 'auto';
+                        uploadBtn.disabled = false;
+                        uploadBtn.textContent = 'Upload Photos';
+                        uploadBtn.style.background = 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error updating storage indicator:', error);
+                });
+        }
+
+        // Update storage indicator on page load and periodically
+        updateStorageIndicator();
+        setInterval(updateStorageIndicator, 30000); // Update every 30 seconds
     </script>
 </body>
 </html>
