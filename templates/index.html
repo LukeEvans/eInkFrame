@@ -679,6 +679,10 @@
             // Upload files
             fetch('/upload', {
                 method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
                 body: formData
             })
             .then(response => response.json())

@@ -98,7 +98,7 @@ def get_storage_info():
 @app.route('/upload', methods=['POST'])
 def upload_file():
     # Check if this is an AJAX request
-    is_ajax = request.headers.get('Content-Type') == 'application/json' or request.is_json
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
     # Check storage limits first
     if is_storage_full():
