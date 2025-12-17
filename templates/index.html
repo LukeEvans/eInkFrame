@@ -44,6 +44,9 @@
             margin-bottom: 20px;
             background: #f8f9fa;
         }
+        .image-card:hover .hover-show {
+            opacity: 1 !important;
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -104,6 +107,9 @@
             <div class="col-6 col-md-4 col-lg-3">
                 <div class="image-card shadow-sm">
                     <img src="{{ url_for('serve_image', filename=image) }}" alt="{{ image }}">
+                    <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center opacity-0 hover-show" style="background: rgba(0,0,0,0.5); transition: opacity 0.2s;">
+                         <a href="{{ url_for('display_image', filename=image) }}" class="btn btn-primary btn-sm me-2">Display</a>
+                    </div>
                     <a href="{{ url_for('delete_file', filename=image) }}" class="delete-btn" onclick="return confirm('Are you sure you want to delete this image?');">
                         &times;
                     </a>

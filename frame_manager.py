@@ -12,6 +12,7 @@ if __name__ == "__main__":
     # Define source path and config path
     sd_path = os.path.expanduser("~/images")
     config_path = os.path.expanduser("~/config.txt")
+    request_path = os.path.expanduser("~/display_request.txt")
     
     # Get refresh time from config or default
     refresh_time = 600
@@ -27,7 +28,7 @@ if __name__ == "__main__":
     print(f"Frame manager received Source path: {sd_path}")
     print(f"Frame manager received refresh time: {refresh_time} seconds")
     
-    display_manager = DisplayManager(image_folder=PIC_PATH, refresh_time=refresh_time)
+    display_manager = DisplayManager(image_folder=PIC_PATH, refresh_time=refresh_time, request_file=request_path)
     print("Display manager created")
 
     # Delete existing directory and create a new one

@@ -17,12 +17,13 @@ class DisplayManager:
     # Initializes the display using the epd7in3f library.
     # Sets the rotation and refresh time for the display.
     # Initializes the last display time and selected image to None.
-    def __init__(self, image_folder, refresh_time):
+    def __init__(self, image_folder, refresh_time, request_file=None):
         self.last_display_time = time.time()
         self.last_selected_image = None
         self.image_folder = image_folder
         self.rotation = 180
         self.refresh_time = refresh_time
+        self.request_file = request_file
         self.epd = epd7in3e.EPD()
         self.epd.init()
         self.stop_display = False
@@ -69,6 +70,31 @@ class DisplayManager:
             self.last_display_time = time.time()
 
         while not self.stop_display:
+            # Check for display request
+            if self.request_file and os.path.exists(self.request_file):
+                try:
+                    with open(self.request_file, 'r') as f:
+                        requested_image = f.read().strip()
+                    
+                    try:
+                        os.remove(self.request_file)
+                    except OSError:
+                        pass
+                    
+                    # Refresh images list in case it's new
+                    images = self.fetch_image_files()
+                    
+                    if requested_image in images:
+                        print(f"Displaying requested image: {requested_image}")
+                        self.last_selected_image = requested_image
+                        
+                        with Image.open(os.path.join(self.image_folder, requested_image)) as pic:
+                            pic = pic.rotate(self.rotation, expand=False)
+                            self.epd.display(self.epd.getbuffer(pic))
+                            self.last_display_time = time.time()
+                except Exception as e:
+                    print(f"Error processing display request: {e}")
+
             current_time = time.time()
             elapsed_time = current_time - self.last_display_time
             

@@ -21,6 +21,13 @@ else:
     # Fallback for development/local run
     IMAGE_FOLDER = os.path.expanduser('~/images')
     CONFIG_FILE = os.path.expanduser('~/config.txt')
+    DISPLAY_REQUEST_FILE = os.path.expanduser('~/display_request.txt')
+
+if sudo_user:
+    IMAGE_FOLDER = f'/home/{sudo_user}/images'
+    CONFIG_FILE = f'/home/{sudo_user}/config.txt'
+    DISPLAY_REQUEST_FILE = f'/home/{sudo_user}/display_request.txt'
+
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'bmp', 'gif', 'heic', 'heif'}
 
 if not os.path.exists(IMAGE_FOLDER):
@@ -126,6 +133,22 @@ def update_config():
             flash(f'Error saving config: {e}')
     else:
         flash('Invalid refresh time')
+        
+    return redirect(url_for('index'))
+
+@app.route('/display/<filename>')
+def display_image(filename):
+    try:
+        # Check if file exists in source directory
+        file_path = os.path.join(IMAGE_FOLDER, filename)
+        if os.path.exists(file_path):
+            with open(DISPLAY_REQUEST_FILE, 'w') as f:
+                f.write(filename)
+            flash(f'Request to display {filename} sent.')
+        else:
+            flash('File not found.')
+    except Exception as e:
+        flash(f'Error requesting display: {e}')
         
     return redirect(url_for('index'))
 
