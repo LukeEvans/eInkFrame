@@ -75,10 +75,10 @@ class ImageConverter:
 
             print("Enchancing image...")
             color = ImageEnhance.Color(cropped_img)
-            cropped_img = color.enhance(1.2)
+            cropped_img = color.enhance(1.5)
 
             contrast = ImageEnhance.Contrast(cropped_img)
-            cropped_img = contrast.enhance(1.2)
+            cropped_img = contrast.enhance(1.5)
             
             print("Saving image...")
             # Save the final image

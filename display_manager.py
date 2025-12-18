@@ -3,10 +3,9 @@ import sys
 import time
 import random
 import json
-import logging
 from datetime import datetime, timedelta
 from PIL import Image
-from lib.waveshare_epd import epd7in3f
+from lib.waveshare_epd import epd7in3e
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 LIB_PATH = os.path.join(SCRIPT_DIR, 'lib')
@@ -28,7 +27,7 @@ class DisplayManager:
         self.history_file = os.path.join(image_folder, '.display_history.json')
         self.image_history = self.load_history()
         self.last_daily_refresh = self.get_last_daily_refresh_time()
-        self.epd = epd7in3f.EPD()
+        self.epd = epd7in3e.EPD()
         self.epd.init()
         self.stop_display = False
 
@@ -137,7 +136,7 @@ class DisplayManager:
             # Driver auto-handles rotation for 480x800 input, but if it is upside down
             # we need to rotate it 180 degrees first.
             pic = pic.rotate(self.rotation, expand=False)
-            self.epd.display(self.get_enhanced_buffer(pic, dither_mode='none'))
+            self.epd.display(self.epd.getbuffer(pic))
 
         while not self.stop_display:
             # Check for display request
@@ -171,7 +170,7 @@ class DisplayManager:
 
                         with Image.open(os.path.join(self.image_folder, requested_image)) as pic:
                             pic = pic.rotate(self.rotation, expand=False)
-                            self.epd.display(self.get_enhanced_buffer(pic, dither_mode='none'))
+                            self.epd.display(self.epd.getbuffer(pic))
                 except Exception as e:
                     print(f"Error processing display request: {e}")
 
@@ -185,7 +184,7 @@ class DisplayManager:
                     with Image.open(os.path.join(self.image_folder, random_image)) as pic:
                         print(f"Daily refresh: Displaying new image: {random_image}")
                         pic = pic.rotate(self.rotation, expand=False)
-                        self.epd.display(self.get_enhanced_buffer(pic, dither_mode='none'))
+                        self.epd.display(self.epd.getbuffer(pic))
 
                     # Update last daily refresh time
                     self.last_daily_refresh = datetime.now()
@@ -193,47 +192,6 @@ class DisplayManager:
             time.sleep(60) # Sleep for 1 minute to reduce CPU usage
     
 
-    def get_enhanced_buffer(self, image, dither_mode='none'):
-        """
-        Enhanced getbuffer method with different dithering options for better image quality.
-        """
-        # Create a palette with the 7 colors supported by the panel (matching epd7in3f)
-        pal_image = Image.new("P", (1,1))
-        pal_image.putpalette((0,0,0, 255,255,255, 0,255,0, 0,0,255, 255,0,0, 255,255,0, 255,128,0) + (0,0,0)*249)
-
-        # Check if we need to rotate the image
-        imwidth, imheight = image.size
-        if(imwidth == self.epd.width and imheight == self.epd.height):
-            image_temp = image
-        elif(imwidth == self.epd.height and imheight == self.epd.width):
-            image_temp = image.rotate(90, expand=True)
-        else:
-            logger.warning("Invalid image dimensions: %d x %d, expected %d x %d" %
-                          (imwidth, imheight, self.epd.width, self.epd.height))
-            image_temp = image
-
-        # Convert the source image to the 7 colors with different dithering options
-        if dither_mode == 'floyd':
-            # Floyd-Steinberg dithering (more detailed but can look noisy)
-            image_7color = image_temp.convert('RGB').quantize(palette=pal_image, dither=Image.Dither.FLOYDSTEINBERG)
-        elif dither_mode == 'ordered':
-            # Ordered dithering (more structured pattern)
-            image_7color = image_temp.convert('RGB').quantize(palette=pal_image, dither=Image.Dither.ORDERED)
-        else:
-            # No dithering (cleaner but may have banding)
-            image_7color = image_temp.convert('RGB').quantize(palette=pal_image, dither=Image.Dither.NONE)
-
-        buf_7color = bytearray(image_7color.tobytes('raw'))
-
-        # PIL does not support 4 bit color, so pack the 4 bits of color
-        # into a single byte to transfer to the panel
-        buf = [0x00] * int(self.epd.width * self.epd.height / 2)
-        idx = 0
-        for i in range(0, len(buf_7color), 2):
-            buf[idx] = (buf_7color[i] << 4) + buf_7color[i+1]
-            idx += 1
-
-        return buf
 
     def display_message(self, message_file):
         with Image.open(os.path.join(SCRIPT_DIR, f"messages/{message_file}")) as img_start:
