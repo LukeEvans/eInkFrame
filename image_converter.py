@@ -56,7 +56,7 @@ class ImageConverter:
 
             print("Resizing image...")
             # Resize the image while maintaining aspect ratio
-            resized_img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+            resized_img = img.resize((new_width, new_height), Image.Resampling.BICUBIC)
 
             # Calculate the cropping box to center the crop
             left = (new_width - target_width) // 2
@@ -68,12 +68,17 @@ class ImageConverter:
             # Crop the image
             cropped_img = resized_img.crop((left, top, right, bottom))
 
+            print("Enhancing sharpness...")
+            # Add sharpness enhancement to counteract the softness from resizing
+            sharpness = ImageEnhance.Sharpness(cropped_img)
+            cropped_img = sharpness.enhance(1.3)
+
             print("Enchancing image...")
             color = ImageEnhance.Color(cropped_img)
-            cropped_img = color.enhance(1.5)
+            cropped_img = color.enhance(1.2)
 
             contrast = ImageEnhance.Contrast(cropped_img)
-            cropped_img = contrast.enhance(1.5)
+            cropped_img = contrast.enhance(1.2)
             
             print("Saving image...")
             # Save the final image
