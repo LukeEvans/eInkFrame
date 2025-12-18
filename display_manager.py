@@ -198,5 +198,5 @@ class DisplayManager:
                 # Assuming messages are pre-formatted or small enough,
                 # but if they need rotation, we might need to handle them differently.
                 # For now, let's trust the driver handles it if dimensions match.
-                self.epd.display(self.get_enhanced_buffer(img_start, dither_mode='none'))
+                self.epd.display(self.epd.getbuffer(img_start))
 
