@@ -1,4 +1,5 @@
 import os
+import time
 from PIL import Image, ImageEnhance, ImageOps
 
 
@@ -16,16 +17,21 @@ class ImageConverter:
         valid_extensions = ('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff')
 
         for img in os.listdir(self.source_dir):
-
             if img.startswith('.'):
                 continue
             
-            print(f"Found file: {img}")
             img_path = os.path.join(self.source_dir, img)
+            output_path = os.path.join(self.output_dir, img)
+
+            # Skip if already processed
+            if os.path.exists(output_path):
+                continue
 
             if os.path.isfile(img_path) and img.lower().endswith(valid_extensions):
-                print(f"Resizing image: {img_path}")
+                print(f"Processing new image: {img}")
                 self.resize_image(img_path, img)
+                # Small sleep to prevent OOM killer and CPU spikes
+                time.sleep(0.5)
             
 
     # Resizes the image to fit the target dimensions while maintaining aspect ratio.

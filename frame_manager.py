@@ -15,11 +15,9 @@ if __name__ == "__main__":
 
     print(f"Frame manager received Source path: {sd_path}")
 
-    # Delete existing directory and create a new one
+    # Create the directory if it doesn't exist
     # This is where the images will be stored
-    if os.path.exists(PIC_PATH):
-        shutil.rmtree(PIC_PATH)
-    os.makedirs(PIC_PATH)
+    os.makedirs(PIC_PATH, exist_ok=True)
 
     image_converter = ImageConverter(source_dir=sd_path, output_dir=PIC_PATH)
     print("Image converter created")
